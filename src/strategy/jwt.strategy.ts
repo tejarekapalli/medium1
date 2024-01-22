@@ -13,6 +13,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    return { id: payload.sub, username: payload.username }; // Adjust based on your payload
+    if (payload.type && payload.type === 'refresh') {
+      // Handle refresh token validation differently, if needed
+      // You may want to check additional claims or blacklist old refresh tokens
+      return { id: payload.sub, type: 'refresh' };
+    }
+
+    return { id: payload.sub, type: 'access' }; // Adjust based on your payload
   }
 }

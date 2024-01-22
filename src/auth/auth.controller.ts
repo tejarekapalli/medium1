@@ -18,10 +18,14 @@ export class AuthController {
     }
 
     @Post('login')
-    @HttpCode(HttpStatus.OK)
-    login(@Body() user:ExistingUserDto):Promise<{token:string} | null>{
-        return this.authService.login(user)
-    }
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() user: ExistingUserDto): Promise<{ accessToken: string; refreshToken: string } | null> {
+    const tokens = await this.authService.login(user);
+
+    if (!tokens) return null;
+
+    return tokens;
+  }
 
     @Post('logout')
 async logout(@Request() req) {

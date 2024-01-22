@@ -59,29 +59,37 @@ export class AuthService {
         }
       }
   
-    async login(existingUser: ExistingUserDto): Promise<{ token: string } | null> {
-      const { email, password } = existingUser;
-      const user = await this.validateUser(email, password);
+      async login(existingUser: ExistingUserDto): Promise<{ accessToken: string; refreshToken: string } | null> {
+        const { email, password } = existingUser;
+        const user = await this.validateUser(email, password);
+      
+        if (!user) return null;
+      
+        const tokens = await this.createTokens(user.id); // Assuming user.id is the user's identifier
+      
+        return tokens;
+      }
+    async createTokens(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+      const accessTokenPayload = { sub: userId };
+      const refreshTokenPayload = { sub: userId, type: 'refresh' };
   
-      if (!user) return null;
+      const accessToken = this.jwtService.sign(accessTokenPayload, { expiresIn: '3600s' }); // Adjust the expiration as needed
+      const refreshToken = this.jwtService.sign(refreshTokenPayload, { expiresIn: '7d' }); // Adjust the expiration as needed
   
-      const jwt = await this.jwtService.signAsync({ user });
-      return { token: jwt };
+      return { accessToken, refreshToken };
     }
-
-    async createToken(userId: string) {
-    const payload = { sub: userId };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  
+    async logout(userId: string): Promise<void> {
+      // Invalidate both access and refresh tokens
+      const accessToken = this.jwtService.sign({ sub: userId });
+      const refreshToken = this.jwtService.sign({ sub: userId, type: 'refresh' });
+  
+      this.revokedTokens.add(accessToken);
+      this.revokedTokens.add(refreshToken);
+    }
+  
+    isTokenRevoked(token: string): boolean {
+      return this.revokedTokens.has(token);
+    }
   }
-
-  async logout(userId: string): Promise<void> {
-    const token = this.jwtService.sign({ sub: userId });
-    this.revokedTokens.add(token);
-  }
-
-  isTokenRevoked(token: string): boolean {
-    return this.revokedTokens.has(token);
-  }
-  }
+  
